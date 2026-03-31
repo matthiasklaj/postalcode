@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Postal Code Finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f4f0; --surface: #ffffff; --border: #e2e0d8; --border-strong: #c8c5bb;
+      --text: #1a1916; --text-2: #6b6860; --text-3: #a09d96;
+      --accent: #1a1916; --accent-fg: #ffffff;
+      --success-bg: #edf7ee; --success-text: #2d6a31;
+      --info-bg: #eef4fb; --info-text: #1a4a7a;
+      --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif;
+      --radius: 10px; --radius-sm: 6px;
+    }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 60px 20px 80px; }
+    header { text-align: center; margin-bottom: 48px; }
+    header h1 { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 8px; }
+    header p { font-size: 15px; color: var(--text-2); font-weight: 300; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 100%; max-width: 620px; }
+    .form-area { padding: 28px 28px 24px; }
+    .field + .field { margin-top: 14px; }
+    .field label { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-2); margin-bottom: 6px; }
+    .field input, .field select { width: 100%; height: 42px; padding: 0 14px; font-family: var(--sans); font-size: 15px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); outline: none; transition: border-color 0.15s; appearance: none; }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--text-3); }
+    .select-wrap { position: relative; }
+    .select-wrap::after { content: ''; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--text-2); pointer-events: none; }
+    .btn-row { display: flex; gap: 10px; margin-top: 18px; }
+    button { font-family: var(--sans); font-size: 14px; font-weight: 500; cursor: pointer; border-radius: var(--radius-sm); height: 42px; padding: 0 20px; transition: opacity 0.15s, transform 0.1s; border: 1px solid transparent; }
+    button:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: var(--accent-fg); flex: 1; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-ghost { background: transparent; color: var(--text-2); border-color: var(--border); }
+    .btn-ghost:hover { background: var(--bg); }
+    .divider { height: 1px; background: var(--border); }
+    .result-area { padding: 24px 28px; }
+    .result-area.hidden { display: none; }
+    .result-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+    .postal-display { font-family: var(--mono); font-size: 32px; font-weight: 500; letter-spacing: 0.08em; }
+    .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+    .meta-item.full { grid-column: span 2; }
+    .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); margin-bottom: 3px; }
+    .meta-val { font-size: 14px; font-weight: 500; color: var(--text); }
+    .meta-val.dim { color: var(--text-3); font-weight: 400; }
+    .meta-val.mono { font-family: var(--mono); }
+    .alts-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); margin-bottom: 8px; }
+    .alt-item { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
+    .alt-code { font-family: var(--mono); font-size: 14px; font-weight: 500; min-width: 90px; }
+    .alt-info { font-size: 12px; color: var(--text-2); }
+    .source-tag { font-size: 11px; color: var(--text-3); margin-top: 14px; }
+    .map-link { font-size: 12px; color: var(--info-text); text-decoration: none; }
+    .map-link:hover { text-decoration: underline; }
+    .error-msg { color: #8b2020; font-size: 14px; padding: 14px; background: #fdf0f0; border-radius: var(--radius-sm); }
+    .not-found { text-align: center; padding: 16px 0; color: var(--text-2); font-size: 14px; line-height: 1.6; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    footer { margin-top: 32px; font-size: 12px; color: var(--text-3); text-align: center; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Postal code finder</h1>
+  <p>Enter any address — get the most accurate postal code, worldwide</p>
+</header>
+
+<div class="card">
+  <div class="form-area">
+    <div class="field">
+      <label>Street address</label>
+      <input id="addr" type="text" placeholder="e.g. 3 Rue Périgon, Paris" autocomplete="off" spellcheck="false" />
+    </div>
+    <div class="field">
+      <label>Country</label>
+      <div class="select-wrap"><select id="country"></select></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" id="find-btn" onclick="findPostal()">Find postal code</button>
+      <button class="btn-ghost" onclick="clearAll()">Clear</button>
+    </div>
+  </div>
+
+  <div class="divider" id="divider" style="display:none;"></div>
+  <div class="result-area hidden" id="result-area">
+    <div id="result-inner"></div>
+  </div>
+</div>
+
+<footer>Powered by OpenStreetMap · No API key required · Free to use</footer>
+
+<script>
+const COUNTRIES = [
+  {c:"AD",n:"Andorra"},{c:"AE",n:"UAE"},{c:"AR",n:"Argentina"},{c:"AT",n:"Austria"},
+  {c:"AU",n:"Australia"},{c:"BE",n:"Belgium"},{c:"BR",n:"Brazil"},{c:"CA",n:"Canada"},
+  {c:"CH",n:"Switzerland"},{c:"CL",n:"Chile"},{c:"CN",n:"China"},{c:"CO",n:"Colombia"},
+  {c:"CZ",n:"Czech Republic"},{c:"DE",n:"Germany"},{c:"DK",n:"Denmark"},
+  {c:"DZ",n:"Algeria"},{c:"EC",n:"Ecuador"},{c:"EE",n:"Estonia"},{c:"EG",n:"Egypt"},
+  {c:"ES",n:"Spain"},{c:"FI",n:"Finland"},{c:"FR",n:"France"},{c:"GB",n:"United Kingdom"},
+  {c:"GR",n:"Greece"},{c:"HR",n:"Croatia"},{c:"HU",n:"Hungary"},{c:"ID",n:"Indonesia"},
+  {c:"IE",n:"Ireland"},{c:"IL",n:"Israel"},{c:"IN",n:"India"},{c:"IQ",n:"Iraq"},
+  {c:"IR",n:"Iran"},{c:"IS",n:"Iceland"},{c:"IT",n:"Italy"},{c:"JP",n:"Japan"},
+  {c:"KE",n:"Kenya"},{c:"KR",n:"South Korea"},{c:"KZ",n:"Kazakhstan"},
+  {c:"LT",n:"Lithuania"},{c:"LU",n:"Luxembourg"},{c:"LV",n:"Latvia"},
+  {c:"MA",n:"Morocco"},{c:"MD",n:"Moldova"},{c:"MX",n:"Mexico"},{c:"MY",n:"Malaysia"},
+  {c:"NG",n:"Nigeria"},{c:"NL",n:"Netherlands"},{c:"NO",n:"Norway"},{c:"NP",n:"Nepal"},
+  {c:"NZ",n:"New Zealand"},{c:"OM",n:"Oman"},{c:"PE",n:"Peru"},{c:"PH",n:"Philippines"},
+  {c:"PK",n:"Pakistan"},{c:"PL",n:"Poland"},{c:"PT",n:"Portugal"},{c:"RO",n:"Romania"},
+  {c:"RS",n:"Serbia"},{c:"RU",n:"Russia"},{c:"SA",n:"Saudi Arabia"},{c:"SE",n:"Sweden"},
+  {c:"SG",n:"Singapore"},{c:"SI",n:"Slovenia"},{c:"SK",n:"Slovakia"},{c:"TH",n:"Thailand"},
+  {c:"TN",n:"Tunisia"},{c:"TR",n:"Turkey"},{c:"TW",n:"Taiwan"},{c:"UA",n:"Ukraine"},
+  {c:"US",n:"United States"},{c:"UY",n:"Uruguay"},{c:"UZ",n:"Uzbekistan"},
+  {c:"VE",n:"Venezuela"},{c:"VN",n:"Vietnam"},{c:"ZA",n:"South Africa"},{c:"ZM",n:"Zambia"}
+];
+
+const sel = document.getElementById('country');
+COUNTRIES.forEach(c => {
+  const o = document.createElement('option');
+  o.value = c.c; o.textContent = c.c + ' — ' + c.n;
+  if (c.c === 'FR') o.selected = true;
+  sel.appendChild(o);
+});
+
+document.getElementById('addr').addEventListener('keydown', e => { if (e.key === 'Enter') findPostal(); });
+
+function showResult(html) {
+  document.getElementById('divider').style.display = 'block';
+  const area = document.getElementById('result-area');
+  area.classList.remove('hidden');
+  document.getElementById('result-inner').innerHTML = html;
+}
+
+async function findPostal() {
+  const addr = document.getElementById('addr').value.trim();
+  const cc = document.getElementById('country').value;
+  const countryName = COUNTRIES.find(c => c.c === cc)?.n || cc;
+  if (!addr) { document.getElementById('addr').focus(); return; }
+
+  const btn = document.getElementById('find-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Searching…';
+  showResult('<div style="text-align:center;padding:16px;color:var(--text-3);font-size:14px;">Looking up postal code…</div>');
+
+  try {
+    const res = await fetch('/api/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: addr, country: countryName, countryCode: cc })
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      showResult(`<div class="error-msg">Error: ${data.error || 'Unknown error'}</div>`);
+      return;
+    }
+
+    if (!data.found) {
+      showResult(`<div class="not-found"><strong>No postal code found</strong><br>${data.reason}</div>`);
+      return;
+    }
+
+    const mapUrl = data.lat && data.lon ? `https://www.openstreetmap.org/?mlat=${data.lat}&mlon=${data.lon}&zoom=15` : null;
+
+    const altsHtml = data.alternatives?.length ? `
+      <div style="margin-top:16px;">
+        <div class="alts-title">Other candidates</div>
+        ${data.alternatives.map(a => `<div class="alt-item"><span class="alt-code">${a.postal_code}</span><span class="alt-info">${a.area || ''}</span></div>`).join('')}
+      </div>` : '';
+
+    showResult(`
+      <div class="result-header">
+        <span class="postal-display">${data.postal_code}</span>
+        ${mapUrl ? `<a class="map-link" href="${mapUrl}" target="_blank">view on map →</a>` : ''}
+      </div>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <div class="meta-label">City</div>
+          <div class="meta-val ${!data.city?'dim':''}">${data.city||'—'}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">State / region</div>
+          <div class="meta-val ${!data.state?'dim':''}">${data.state||'—'}</div>
+        </div>
+        <div class="meta-item full">
+          <div class="meta-label">Formatted address</div>
+          <div class="meta-val" style="font-size:13px;line-height:1.5;">${data.formatted_address||addr}</div>
+        </div>
+        ${data.lat ? `<div class="meta-item"><div class="meta-label">Coordinates</div><div class="meta-val mono" style="font-size:12px;">${data.lat}, ${data.lon}</div></div>` : ''}
+      </div>
+      ${altsHtml}
+      <div class="source-tag">Source: ${data.source}</div>
+    `);
+  } catch (e) {
+    showResult(`<div class="error-msg">Request failed: ${e.message}</div>`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Find postal code';
+  }
+}
+
+function clearAll() {
+  document.getElementById('addr').value = '';
+  document.getElementById('result-area').classList.add('hidden');
+  document.getElementById('divider').style.display = 'none';
+}
+</script>
+</body>
+</html>
